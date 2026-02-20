@@ -57,65 +57,26 @@
         .rating-table tr:first-child { background-color: #d9e1f2; font-weight: bold; }
 
         .footer-note { font-size: 12px; margin-top: 20px; color: #333; font-style: italic; }
+
         /* Adaptación para Móviles */
-@media (max-width: 950px) {
-    body {
-        padding: 10px;
-    }
-
-    .excel-container {
-        width: 100%; /* El contenedor deja de ser rígido */
-        padding: 15px;
-        box-sizing: border-box;
-    }
-
-    .main-content {
-        flex-direction: column; /* Ponemos las tablas una sobre otra */
-    }
-
-    .inputs-column, .totals-column {
-        width: 100% !important;
-    }
-
-    /* Forzamos a que las tablas ocupen todo el ancho y se lean bien */
-    table {
-        width: 100% !important;
-        margin-bottom: 20px !important;
-    }
-
-    /* Ajuste de la barra final para que no se amontone el texto */
-    .final-bar {
-        grid-template-columns: 1fr; /* Una columna en lugar de dos */
-    }
-
-    .final-value-box {
-        border-left: none;
-        border-top: 2px solid #000;
-    }
-
-    /* Ajuste de las tablas inferiores */
-    .bottom-sections {
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .summary-table, .rating-table {
-        width: 100% !important;
-    }
-
-    /* Hacer los inputs un poco más fáciles de tocar con el dedo */
-    input {
-        padding: 5px 0;
-    }
-}
+        @media (max-width: 950px) {
+            body { padding: 10px; }
+            .excel-container { width: 100%; padding: 15px; box-sizing: border-box; }
+            .main-content { flex-direction: column; }
+            .inputs-column, .totals-column { width: 100% !important; }
+            table { width: 100% !important; margin-bottom: 20px !important; }
+            .final-bar { grid-template-columns: 1fr; }
+            .final-value-box { border-left: none; border-top: 2px solid #000; }
+            .bottom-sections { flex-direction: column; gap: 20px; }
+            .summary-table, .rating-table { width: 100% !important; }
+            .chart-section { height: 300px; } /* Solo se aplica en móvil */
+        }
     </style>
 </head>
 <body>
 
 <div class="excel-container">
-    <div class="logo-container">
-    </div>
-
+    <div class="logo-container"></div>
     <div class="header-main">MARCA PERSONAL</div>
     <div class="sub-header">Califique las variables (0 a 10)</div>
 
@@ -180,10 +141,7 @@
 
     <div class="bottom-sections">
         <table class="summary-table">
-            <tr class="summary-header">
-                <td>Categoría</td>
-                <td>Valor</td>
-            </tr>
+            <tr class="summary-header"><td>Categoría</td><td>Valor</td></tr>
             <tr class="row-alt"><td>Experiencia</td><td id="res1">0</td></tr>
             <tr><td>Formación</td><td id="res2">0</td></tr>
             <tr class="row-alt"><td>Habilidades</td><td id="res3">0</td></tr>
@@ -203,16 +161,16 @@
         </table>
     </div>
 
-    <div class="footer-note">
-        *Circunstancias = suerte, tiempo que se puede dedicar al trabajo, apariencia, estado de ánimo, edad ...
-    </div>
+    <div class="footer-note">*Circunstancias = suerte, tiempo...</div>
 </div>
 
 <script>
     let myChart;
 
     function initChart() {
+        const isMobile = window.innerWidth <= 950;
         const ctx = document.getElementById('lineChart').getContext('2d');
+        
         myChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -230,6 +188,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: !isMobile, // Solo se desactiva en móvil
                 plugins: { legend: { display: false } },
                 scales: {
                     y: {
@@ -240,7 +199,12 @@
                     },
                     x: {
                         grid: { display: false },
-                        ticks: { color: '#333', font: { size: 11 } }
+                        ticks: { 
+                            color: '#333', 
+                            font: { size: isMobile ? 10 : 11 },
+                            maxRotation: isMobile ? 45 : 0, // Solo rota en móvil
+                            minRotation: isMobile ? 45 : 0
+                        }
                     }
                 }
             }
@@ -248,23 +212,14 @@
     }
 
     function calculate() {
-        //Forzar valores a ser enteros
         const v = [1,2,3,4,5,6,7].map(i => {
             const input = document.getElementById('v'+i);
             let val = parseFloat(input.value) || 0;
-            
-            // Redondea valor metido por el usuario
-            if (!Number.isInteger(val)) {
-                val = Math.round(val);
-                input.value = val;
-            }
-            
-            return Math.min(val, 1000); 
+            if (!Number.isInteger(val)) { val = Math.round(val); input.value = val; }
+            return Math.min(val, 10);
         });
         
-        v.forEach((val, index) => {
-            document.getElementById('res' + (index + 1)).innerText = val;
-        });
+        v.forEach((val, index) => { document.getElementById('res' + (index + 1)).innerText = val; });
 
         if(myChart) {
             myChart.data.datasets[0].data = v;
@@ -276,29 +231,17 @@
         const r3 = v[6];
         const total = Math.round(r1 * r2 * r3);
 
-        // Para mostrar resultados en enteros
         document.getElementById('total-row1').innerText = Math.round(r1);
         document.getElementById('total-row2').innerText = Math.round(r2);
         document.getElementById('total-row3').innerText = Math.round(r3);
         document.getElementById('total-final').innerText = total.toLocaleString();
 
         const status = document.getElementById('status-text');
-        if (total >= 5800) {
-            status.innerText = "Excelente";
-            status.style.backgroundColor = "#00b050";
-        } else if (total >= 4000) {
-            status.innerText = "Muy Buena";
-            status.style.backgroundColor = "#00b050";
-        } else if (total >= 2700) {
-            status.innerText = "Buena";
-            status.style.backgroundColor = "#92d050";
-        } else if (total >= 1000) {
-            status.innerText = "En Media";
-            status.style.backgroundColor = "#ffcc00";
-        } else {
-            status.innerText = "Debajo de la Media";
-            status.style.backgroundColor = "#f8cecc";
-        }
+        if (total >= 5800) { status.innerText = "Excelente"; status.style.backgroundColor = "#00b050"; }
+        else if (total >= 4000) { status.innerText = "Muy Buena"; status.style.backgroundColor = "#00b050"; }
+        else if (total >= 2700) { status.innerText = "Buena"; status.style.backgroundColor = "#92d050"; }
+        else if (total >= 1000) { status.innerText = "En Media"; status.style.backgroundColor = "#ffcc00"; }
+        else { status.innerText = "Debajo de la Media"; status.style.backgroundColor = "#f8cecc"; }
     }
 
     window.onload = () => {
